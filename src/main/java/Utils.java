@@ -1,9 +1,17 @@
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Properties;
+
+import javax.mail.MessagingException;
+import javax.mail.Session;
+import javax.mail.internet.InternetAddress;
+import javax.mail.internet.MimeMessage;
 
 import com.gdrive.desktop.client.Global.DriveDesktopClient;
+import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
 import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Properties.Get;
@@ -14,10 +22,19 @@ import com.google.api.services.drive.model.ChildReference;
 import com.google.api.services.drive.model.File;
 import com.google.api.services.drive.model.ParentReference;
 import com.google.api.services.drive.model.Property;
+import com.google.api.services.gmail.model.Message;
 
 public class Utils {
 
-	static boolean setProperty(String fileID, String propertyKey,
+	/**
+	 * set any custom property on google drive file
+	 * 
+	 * @param fileID
+	 * @param propertyKey
+	 * @param propertyValue
+	 * @return
+	 */
+	static boolean SetProperty(String fileID, String propertyKey,
 			String propertyValue) {
 
 		boolean setEtag = true;
@@ -37,7 +54,14 @@ public class Utils {
 
 	}
 
-	static String getPropertyValue(String fileID, String propertKey) {
+	/**
+	 * get any custom property on google drive file
+	 * 
+	 * @param fileID
+	 * @param propertKey
+	 * @return property value if exist else null
+	 */
+	static String GetPropertyValue(String fileID, String propertKey) {
 
 		String lastEtag = null;
 		Get request;
@@ -54,12 +78,18 @@ public class Utils {
 		return lastEtag;
 	}
 
+	/**
+	 * Is file has IS_WATCHING property i.e this lib watching file for changes
+	 * 
+	 * @param fileID
+	 * @return true if IS_WATCHING property exist on file else faklse
+	 */
 	static boolean IsWatching(String fileID) {
 
 		boolean isWatching = true;
 
 		String WatchingValue = null;
-		WatchingValue = getPropertyValue(fileID, App.WATCHING_KEY);
+		WatchingValue = GetPropertyValue(fileID, App.WATCHING_KEY);
 		if (WatchingValue == null
 				|| !WatchingValue.equals(App.WATCHING_VALUE_YES)) {
 			isWatching = false;
@@ -67,6 +97,13 @@ public class Utils {
 		return isWatching;
 	}
 
+	/**
+	 * set our custom property on folder & its child so that it will be easy
+	 * identify any changes
+	 * 
+	 * @param folderID
+	 * @return
+	 */
 	static boolean InitializeFolderWithOurTag(String folderID) {
 
 		File folderMetadata = null;
@@ -76,8 +113,8 @@ public class Utils {
 		} catch (IOException e1) {
 			e1.printStackTrace();
 		}
-		setProperty(folderID, App.LAST_ETAG, folderMetadata.getEtag());
-		setProperty(folderID, App.WATCHING_KEY, App.WATCHING_VALUE_YES);
+		SetProperty(folderID, App.LAST_ETAG, folderMetadata.getEtag());
+		SetProperty(folderID, App.WATCHING_KEY, App.WATCHING_VALUE_YES);
 
 		Drive.Children.List request = null;
 		try {
@@ -91,11 +128,11 @@ public class Utils {
 							DriveDesktopClient.FOLDER_MIME_TYPE)) {
 						InitializeFolderWithOurTag(childFile.getId());
 					} else {
-						setProperty(folderID, App.WATCHING_KEY,
+						SetProperty(folderID, App.WATCHING_KEY,
 								App.WATCHING_VALUE_YES);
-						setProperty(childFile.getId(), App.LAST_ETAG,
+						SetProperty(childFile.getId(), App.LAST_ETAG,
 								childFile.getEtag());
-						setProperty(childFile.getId(), App.LAST_CHECKSUM,
+						SetProperty(childFile.getId(), App.LAST_CHECKSUM,
 								childFile.getMd5Checksum());
 					}
 				}
@@ -108,11 +145,21 @@ public class Utils {
 		return true;
 	}
 
-	static HashMap<File, Changes> getFolderChanges(String folderID) {
+	/**
+	 * find changes in folder & in its child
+	 * 
+	 * @param folderID
+	 * @return pairing of file & its changes
+	 */
+	/**
+	 * @param folderID
+	 * @return
+	 */
+	public static HashMap<File, Changes> GetFolderChanges(String folderID) {
 		HashMap<File, Changes> changeList = new HashMap<File, Changes>();
 
 		if (!IsWatching(folderID)) {
-			changeList = getInterstedChangeFromServer(folderID);
+			changeList = GetInterstedChangeFromServer(folderID);
 			InitializeFolderWithOurTag(folderID);
 		}
 
@@ -122,6 +169,17 @@ public class Utils {
 		return changeList;
 	}
 
+	/**
+	 * find changes on file if we are observing it i.e already set our custom
+	 * property
+	 * 
+	 * @param folderID
+	 * @return
+	 */
+	/**
+	 * @param folderID
+	 * @return
+	 */
 	private static HashMap<File, Changes> FindChangesForFolder(String folderID) {
 		HashMap<File, Changes> changeList = new HashMap<File, Changes>();
 		Changes folderChg = new Changes();
@@ -134,10 +192,10 @@ public class Utils {
 		}
 
 		if (!folderMetadata.getEtag().equals(
-				getPropertyValue(folderID, App.LAST_ETAG))) {
+				GetPropertyValue(folderID, App.LAST_ETAG))) {
 			folderChg.m_Metadata = true;
 			changeList.put(folderMetadata, folderChg);
-			setProperty(folderID, App.LAST_ETAG, folderMetadata.getEtag());
+			SetProperty(folderID, App.LAST_ETAG, folderMetadata.getEtag());
 		}
 		Drive.Children.List request = null;
 		try {
@@ -153,44 +211,44 @@ public class Utils {
 						chg.m_UnwatchedFile = true;
 						changeList.put(childFile, chg);
 
-						setProperty(childFile.getId(), App.WATCHING_KEY,
+						SetProperty(childFile.getId(), App.WATCHING_KEY,
 								App.WATCHING_VALUE_YES);
-						setProperty(childFile.getId(), App.LAST_ETAG,
+						SetProperty(childFile.getId(), App.LAST_ETAG,
 								childFile.getEtag());
-						setProperty(childFile.getId(), App.LAST_CHECKSUM,
+						SetProperty(childFile.getId(), App.LAST_CHECKSUM,
 								childFile.getMd5Checksum());
 						continue;
 					}
 					if (childFile.getMimeType().equals(
 							DriveDesktopClient.FOLDER_MIME_TYPE)) {
 						if (!childFile.getEtag().equals(
-								getPropertyValue(childFile.getId(),
+								GetPropertyValue(childFile.getId(),
 										App.LAST_ETAG))) {
 							chg.m_Metadata = true;
 							changeList.put(childFile, chg);
 							folderChg.m_Child = true;
-							setProperty(childFile.getId(), App.LAST_ETAG,
+							SetProperty(childFile.getId(), App.LAST_ETAG,
 									childFile.getEtag());
 						}
 						changeList.putAll(FindChangesForFolder(childFile
 								.getId()));
 					} else {
 						if (!childFile.getEtag().equals(
-								getPropertyValue(childFile.getId(),
+								GetPropertyValue(childFile.getId(),
 										App.LAST_ETAG))) {
 							chg.m_Metadata = true;
 							changeList.put(childFile, chg);
-							setProperty(childFile.getId(), App.LAST_ETAG,
+							SetProperty(childFile.getId(), App.LAST_ETAG,
 									childFile.getEtag());
 							folderChg.m_Child = true;
 						}
 						if (childFile.getMd5Checksum() != null
 								&& !childFile.getMd5Checksum().equals(
-										getPropertyValue(childFile.getId(),
+										GetPropertyValue(childFile.getId(),
 												App.LAST_CHECKSUM))) {
 							chg.m_Content = true;
 							changeList.put(childFile, chg);
-							setProperty(childFile.getId(), App.LAST_CHECKSUM,
+							SetProperty(childFile.getId(), App.LAST_CHECKSUM,
 									childFile.getMd5Checksum());
 							folderChg.m_Child = true;
 						}
@@ -206,7 +264,14 @@ public class Utils {
 		return changeList;
 	}
 
-	private static HashMap<File, Changes> getInterstedChangeFromServer(
+	/**
+	 * find changes for file by iterating all changes from server i.e use if
+	 * file dont have custom property
+	 * 
+	 * @param folderID
+	 * @return
+	 */
+	private static HashMap<File, Changes> GetInterstedChangeFromServer(
 			String folderID) {
 
 		HashMap<File, Changes> changeList = new HashMap<File, Changes>();
@@ -259,5 +324,56 @@ public class Utils {
 			}
 		}
 		return changeList;
+	}
+
+	/**
+	 * Create a MimeMessage using the parameters provided.
+	 * 
+	 * @param to
+	 *            Email address of the receiver.
+	 * @param from
+	 *            Email address of the sender, the mailbox account.
+	 * @param subject
+	 *            Subject of the email.
+	 * @param bodyText
+	 *            Body text of the email.
+	 * @return MimeMessage to be used to send email.
+	 * @throws MessagingException
+	 */
+	public static MimeMessage CreateEmail(String to, String from,
+			String subject, String bodyText) throws MessagingException {
+		Properties props = new Properties();
+		Session session = Session.getDefaultInstance(props, null);
+
+		MimeMessage email = new MimeMessage(session);
+		InternetAddress tAddress = new InternetAddress(to);
+		InternetAddress fAddress = new InternetAddress(from);
+
+		email.setFrom(new InternetAddress(from));
+		email.addRecipient(javax.mail.Message.RecipientType.TO,
+				new InternetAddress(to));
+		email.setSubject(subject);
+		email.setText(bodyText);
+		return email;
+	}
+
+	/**
+	 * Create a Message from an email
+	 * 
+	 * @param email
+	 *            Email to be set to raw of message
+	 * @return Message containing base64 encoded email.
+	 * @throws IOException
+	 * @throws MessagingException
+	 */
+	public static Message CreateMessageWithEmail(MimeMessage email)
+			throws MessagingException, IOException {
+		ByteArrayOutputStream baos = new ByteArrayOutputStream();
+		email.writeTo(baos);
+		String encodedEmail = Base64.encodeBase64URLSafeString(baos
+				.toByteArray());
+		Message message = new Message();
+		message.setRaw(encodedEmail);
+		return message;
 	}
 }
