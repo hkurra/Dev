@@ -128,7 +128,7 @@ public class Utils {
 							DriveDesktopClient.FOLDER_MIME_TYPE)) {
 						InitializeFolderWithOurTag(childFile.getId());
 					} else {
-						SetProperty(folderID, App.WATCHING_KEY,
+						SetProperty(childFile.getId(), App.WATCHING_KEY,
 								App.WATCHING_VALUE_YES);
 						SetProperty(childFile.getId(), App.LAST_ETAG,
 								childFile.getEtag());

@@ -51,7 +51,7 @@ import javax.mail.internet.MimeMessage;
 public class App {
 	//0BzehUff2oW6HMHBYVFFnXzNlVmc
 	
-	public static String folderID = "0Bx5XsDaBgWSKNXQ0eFNLMXpYd2s";
+	public static String folderID = "0BzehUff2oW6HUmxoUFk4bTVmWnc";
 	public static String WATCHING_KEY = "IS_WATCHING_ITS_CHANGES";
 	public static String LAST_ETAG = "LAST_ETAG";
 	public static String LAST_CHECKSUM = "LAST_CHECKSUM";
@@ -110,7 +110,16 @@ public class App {
 
 				if (key.getId().equals(folderID)) {
 					changeFolderMetadata = false;
-					msgBody.append("change in folder metadata by "
+					
+					StringBuffer changesToPrint = new StringBuffer("");
+					
+					if (value.m_Metadata) {
+						changesToPrint.append(" metadata(name etc) ");
+					}
+					if (value.m_UnwatchedFile) {
+						changesToPrint.append(" new Added ");
+					}
+					msgBody.append("change in folder " + changesToPrint + " by "
 							+ key.getLastModifyingUserName() + " on "
 							+ key.getModifiedDate() + " GMT " + "\n\n");
 				} else {
@@ -139,7 +148,10 @@ public class App {
 				PermissionList permissions = DriveDesktopClient.DRIVE
 						.permissions().list(folderID).execute();
 				List<Permission> permList = permissions.getItems();
-
+				
+				if(permList.size() <= 1){
+					return;
+				}
 				for (int i = 0; i < permList.size(); i++) {
 					String receiverEmailAddress = permList.get(i)
 							.getEmailAddress();
