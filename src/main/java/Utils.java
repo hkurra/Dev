@@ -12,7 +12,6 @@ import javax.mail.internet.MimeMessage;
 
 import com.gdrive.desktop.client.Global.DriveDesktopClient;
 import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
-import com.google.api.client.util.DateTime;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.Drive.Properties.Get;
 import com.google.api.services.drive.model.Change;
@@ -346,8 +345,6 @@ public class Utils {
 		Session session = Session.getDefaultInstance(props, null);
 
 		MimeMessage email = new MimeMessage(session);
-		InternetAddress tAddress = new InternetAddress(to);
-		InternetAddress fAddress = new InternetAddress(from);
 
 		email.setFrom(new InternetAddress(from));
 		email.addRecipient(javax.mail.Message.RecipientType.TO,

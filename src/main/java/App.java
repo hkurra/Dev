@@ -1,43 +1,25 @@
-import java.io.ByteArrayOutputStream;
+
 import java.io.IOException;
-import java.util.ArrayList;
+
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Properties;
+
 
 import com.gdrive.desktop.client.Authorization.UserAutorization;
-import com.gdrive.desktop.client.FileOperation.UploadCommand;
 import com.gdrive.desktop.client.Global.DriveDesktopClient;
-import com.gdrive.desktop.client.cache.GDriveFile;
-import com.gdrive.desktop.client.cache.GDriveFileRevisions;
-import com.gdrive.desktop.client.cache.GDriveFiles;
+
 
 import com.google.api.client.auth.oauth2.Credential;
-import com.google.api.client.repackaged.org.apache.commons.codec.binary.Base64;
-import com.google.api.client.util.DateTime;
-import com.google.api.services.drive.Drive.Parents;
-import com.google.api.services.drive.Drive.Properties.Get;
 import com.google.api.services.drive.Drive;
-import com.google.api.services.drive.Drive.Properties.Update;
-import com.google.api.services.drive.DriveScopes;
-import com.google.api.services.drive.model.ChangeList;
-import com.google.api.services.drive.model.ChildList;
-import com.google.api.services.drive.model.ChildReference;
 import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.ParentReference;
 import com.google.api.services.drive.model.Permission;
 import com.google.api.services.drive.model.PermissionList;
-import com.google.api.services.drive.model.Property;
-import com.google.api.services.drive.model.PropertyList;
 import com.google.api.services.gmail.Gmail;
 import com.google.api.services.gmail.GmailScopes;
 import com.google.api.services.gmail.model.*;
-
 import javax.mail.MessagingException;
-import javax.mail.Session;
-import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 
 /**
@@ -51,7 +33,7 @@ import javax.mail.internet.MimeMessage;
 public class App {
 	//0BzehUff2oW6HMHBYVFFnXzNlVmc
 	
-	public static String folderID = "0BzehUff2oW6HUmxoUFk4bTVmWnc";
+	public static String folderID = "0B7ZszO4g36UZZ3VCS3Z4N3FyNzA";
 	public static String WATCHING_KEY = "IS_WATCHING_ITS_CHANGES";
 	public static String LAST_ETAG = "LAST_ETAG";
 	public static String LAST_CHECKSUM = "LAST_CHECKSUM";
@@ -77,9 +59,6 @@ public class App {
 		Credential credential = authorization.authorize();
 		/* File shared = null; */
 		if (credential != null) {
-
-			com.google.api.services.drive.model.Property prop = null;
-
 			Gmail mailService = new Gmail.Builder(
 					DriveDesktopClient.HTTP_TRANSPORT,
 					DriveDesktopClient.JSON_FACTORY, credential)
@@ -93,8 +72,7 @@ public class App {
 			HashMap<File, Changes> changeList = Utils
 					.GetFolderChanges(folderID);
 
-			Iterator it = changeList.entrySet().iterator();
-			boolean changeFolderMetadata = false;
+			Iterator<Map.Entry<File, Changes>> it = changeList.entrySet().iterator();
 
 			if (changeList.size() > 0) {
 				System.out
@@ -102,15 +80,13 @@ public class App {
 			}
 
 			StringBuffer msgBody = new StringBuffer(
-					"following changes detected since your last Feed \n\n");
+					"Following changes detected since your last Feed \n\n");
 			while (it.hasNext()) {
-				Map.Entry pairs = (Map.Entry) it.next();
+				Map.Entry<File, Changes> pairs = it.next();
 				File key = (File) pairs.getKey();
 				Changes value = (Changes) pairs.getValue();
 
-				if (key.getId().equals(folderID)) {
-					changeFolderMetadata = false;
-					
+				if (key.getId().equals(folderID)) {		
 					StringBuffer changesToPrint = new StringBuffer("");
 					
 					if (value.m_Metadata) {
@@ -121,7 +97,7 @@ public class App {
 					}
 					msgBody.append("change in folder " + changesToPrint + " by "
 							+ key.getLastModifyingUserName() + " on "
-							+ key.getModifiedDate() + " GMT " + "\n\n");
+							+ key.getModifiedDate() + " GMT \n");
 				} else {
 					StringBuffer changesToPrint = new StringBuffer("");
 
@@ -140,9 +116,10 @@ public class App {
 							+ key.getModifiedDate() + " GMT " + "\n\n");
 				}
 			}
+			msgBody.append("\n\n\n\n\n\n\n\n\n\n To know its origion visit here\n https://github.com/hkurra/Dev\n");
 			System.out.print(msgBody);
-			String senderEmailID = "er.harshkurra@gmail.com";
-			String subject = "Folder feed -: automated Email";
+			String senderEmailID = "harshkurra21@gmail.com";
+			String subject = "Our Startup Folder feed -: automated Email";
 			
 			try {
 				PermissionList permissions = DriveDesktopClient.DRIVE
