@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Properties;
 
+import javax.annotation.PropertyKey;
 import javax.mail.MessagingException;
 import javax.mail.Session;
 import javax.mail.internet.InternetAddress;
@@ -72,6 +73,58 @@ public class Utils {
 			lastEtag = property.getValue();
 		} catch (IOException e) {
 			lastEtag = null;
+			e.printStackTrace();
+		}
+		return lastEtag;
+	}
+
+	static boolean ArePropetyEqual(String property1, String property2) {
+		
+		if(property1 != null && property2 != null && !property1.equals("") && !property2.equals("")) {
+			
+			return property1.equals(property2);
+		}
+		return false;
+	}
+	
+	static boolean IsFilePropertyChange(File file, String property) {
+		
+		
+		return false;
+	}
+	/**
+	 * get any custom property on google drive file if exist else set this with
+	 * value as defaultValue
+	 * 
+	 * @param fileID
+	 * @param propertKey
+	 * @param defaultValue
+	 * @return
+	 */
+	static String GetPropertyValue(File file, String propertKey,
+			String defaultValue) {
+
+		String lastEtag = null;
+		Get request;
+		try {
+			request = DriveDesktopClient.DRIVE.properties().get(file.getId(),
+					propertKey);
+			request.setVisibility(App.Visibility);
+			Property property = request.execute();
+			lastEtag = property.getValue();
+		} catch (IOException e) {
+			lastEtag = null;
+
+			if (defaultValue == null || defaultValue.equals("")) {
+				if (propertKey.equals(App.LAST_CHECKSUM)) {
+					defaultValue = file.getMd5Checksum();
+				}
+
+				if (propertKey.equals(App.LAST_ETAG)) {
+					defaultValue = file.getEtag();
+				}
+			}
+			SetProperty(file.getId(), propertKey, defaultValue);
 			e.printStackTrace();
 		}
 		return lastEtag;
@@ -160,9 +213,7 @@ public class Utils {
 		if (!IsWatching(folderID)) {
 			changeList = GetInterstedChangeFromServer(folderID);
 			InitializeFolderWithOurTag(folderID);
-		}
-
-		else {
+		} else {
 			changeList = FindChangesForFolder(folderID);
 		}
 		return changeList;

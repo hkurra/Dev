@@ -33,7 +33,7 @@ import javax.mail.internet.MimeMessage;
 public class App {
 	//0BzehUff2oW6HMHBYVFFnXzNlVmc
 	
-	public static String folderID = "0B7ZszO4g36UZZ3VCS3Z4N3FyNzA";
+	public static String folderID = "0BzehUff2oW6HMHBYVFFnXzNlVmc";
 	public static String WATCHING_KEY = "IS_WATCHING_ITS_CHANGES";
 	public static String LAST_ETAG = "LAST_ETAG";
 	public static String LAST_CHECKSUM = "LAST_CHECKSUM";
@@ -41,6 +41,17 @@ public class App {
 	public static String WATCHING_VALUE_NO = "NO";
 	public static String Visibility = "PUBLIC";
 
+	public static enum customProperty {
+		WATCHING_KEY,
+		CHECKSUM,
+		ETAG,
+		STARED,
+		PARENT_ID,
+		TRASHED,
+		VERSION,
+		PERMISSSION_ID,
+		NAME,
+	}
 	/**
 	 * @param args
 	 */
@@ -126,9 +137,9 @@ public class App {
 						.permissions().list(folderID).execute();
 				List<Permission> permList = permissions.getItems();
 				
-				if(permList.size() <= 1){
-					return;
-				}
+//				if(permList.size() <= 1){
+//					return;
+//				}
 				for (int i = 0; i < permList.size(); i++) {
 					String receiverEmailAddress = permList.get(i)
 							.getEmailAddress();
